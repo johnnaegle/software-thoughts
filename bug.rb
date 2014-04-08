@@ -9,57 +9,53 @@ ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: ':memory:'
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 ActiveRecord::Schema.define do
-  create_table :goal_weight_sets do |t|
+  create_table :posts do |t|
     t.string :name
 
     t.timestamps
   end
 
-  create_table :goal_weight_set_nutrients do |t|
-    t.integer :nutrient_id
+  create_table :comments do |t|
     t.boolean :index
-    t.integer :goal_weight_set_id
+    t.integer :post_id
 
     t.timestamps
   end
 end
 
-class GoalWeightSet < ActiveRecord::Base
+class Post < ActiveRecord::Base
   validates :name, :presence => true
 
-  has_many :goal_weight_set_nutrients, :inverse_of=>:goal_weight_set, :dependent=>:destroy, :autosave=>true
+  has_many :comments, :inverse_of=>:post, :dependent=>:destroy, :autosave=>true
 end
 
 
-class GoalWeightSetNutrient < ActiveRecord::Base
-  belongs_to :goal_weight_set, :inverse_of=>:goal_weight_set_nutrients
+class Comment < ActiveRecord::Base
+  belongs_to :post, :inverse_of=>:comments
 
-  scope :model_weights, -> {where(:index=>false)}
+  scope :not_index, -> {where(:index => false)}
   scope :model, -> {where(:index => false)}
-
 end
 
 
-first = GoalWeightSet.create!(:name => "First")
-second = GoalWeightSet.create!(:name => "Second")
-
-first.goal_weight_set_nutrients.create!(:nutrient_id => 1, :index => true)
-first.goal_weight_set_nutrients.create!(:nutrient_id => 1, :index => false)
+first = Post.create!(:name => "First")
+[true, false].each {|x| first.comments.create!(:index => x) }
+second = Post.create!(:name => "Second")
 
 
-class GoalWeightSetNutrientTest < MiniTest::Unit::TestCase
-  def test_model_scope
-    first = GoalWeightSet.where(:name => "First").first
-    assert_equal 1, first.goal_weight_set_nutrients.model.count
+class CommentTest < MiniTest::Unit::TestCase
+  def test_model_scopea
+    first = Post.where(:name => "First").first
+    assert_equal 1, first.comments.model.count
 
-    second = GoalWeightSet.where(:name => "Second").first
-    assert_equal 0, second.goal_weight_set_nutrients.model.count
+    second = Post.where(:name => "Second").first
+    assert_equal 0, second.comments.model.count
   end
-  def test_model_weights_scope
-    first = GoalWeightSet.where(:name => "First").first
-    assert_equal 1, first.goal_weight_set_nutrients.model_weights.count
+  def test_not_index_scope
+    first = Post.where(:name => "First").first
+    assert_equal 1, first.comments.not_index.count
 
-    second = GoalWeightSet.where(:name => "Second").first
-    assert_equal 0, second.goal_weight_set_nutrients.model_weights.count
+    second = Post.where(:name => "Second").first
+    assert_equal 0, second.comments.not_index.count
   end
 end
